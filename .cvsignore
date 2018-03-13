@@ -1,0 +1,10 @@
+*.~*
+*.dcu
+*.obj
+*.dpk
+*.bak
+*.exe
+*#*
+*.ddp
+*.drc
+*.map
