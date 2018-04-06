@@ -552,6 +552,11 @@ var
     Time : TDateTime;
     Milliseconds : Double;
     TimeSpent : Double;
+    path: TList;
+    len: double;
+    index: integer;
+    query: String;
+    dbRes: TDBResult;
 
 //Нажатие кнопки--------------
 begin
@@ -573,9 +578,8 @@ begin
   If HighlightTheSegmentOnly() Then Exit;
 
   BCalculate.Enabled := false;
+
   //Инициализация начальных данных
-  For i := 1 to Length(VertexValues) do
-    VertexValues[i] := -1;
 
   MOS := TMapObjectStructure.Create();
   TempObjects.Clear();
@@ -585,22 +589,42 @@ begin
 
   TimeSpent := 0;
 
-  //HashMap.addItem(startNode, 0);
-  VertexValues[startNodeMUID] := 0;
-  currMinWay := -1;
-
   Time := Now();
 
-  //АЛГОРИТМ
+  //Поиск пути
+  path := TList.Create();
 
-  //Посветка дуг на карте
-  highlightTheWay(Conn, way, wayAmount);
+  len := 0;
+  len := FGraph.FindPath( FGraph.GetNode_ByUID( startNodeMUID ), FGraph.GetNode_ByUID( endNodeMUID ), path);
 
   Milliseconds := DiffDateTimeMsec(Now(),Time) / 1000;
 
-  status.Panels[0].Text := 'Время поиска: ' + FloatToStr(Milliseconds) + 'c';
-  status.Panels[1].Text := 'Длина пути: ' + FloatToStr(totalWayLength/1000) + ' метров';
+  if ( path <> nil ) and ( path.count > 0 ) then
+  begin
 
+    wayAmount := path.Count + 1;
+    SetLength( way, wayAmount );
+    for index := 0 to path.count - 1 do
+    begin
+      query := 'SELECT OKEY FROM uds.graph_nodes WHERE MUID = ' + conn.quoteValue( IntToStr( TBasicGraphEdge( path[index] ).NodeFrom.UID ) );
+      conn.QueryOpen( query, dbRes, true );
+      dbRes.Fetch();
+      way[ wayAmount - 1 - index] := dbRes.asInteger( 0 );
+      FreeAndNil(dbRes);
+    end;
+    query := 'SELECT OKEY FROM uds.graph_nodes WHERE MUID = ' + conn.quoteValue( IntToStr( TBasicGraphEdge( path[path.Count - 1] ).NodeTo.UID ) );
+    conn.QueryOpen( query, dbRes, true );
+    dbRes.Fetch();
+    way[ 0 ] := dbRes.asInteger( 0 );
+    FreeAndNil(dbRes);
+
+    //Посветка дуг на карте
+    highlightTheWay(Conn, way, wayAmount);
+
+  end;
+
+  status.Panels[0].Text := 'Время поиска: ' + FloatToStr(Milliseconds) + 'c';
+  status.Panels[1].Text := 'Длина пути: ' + FloatToStr(len) + ' метров';
 
   FillVTResult();
   FMap.Show();
@@ -610,6 +634,7 @@ begin
 
   //Освобождение памяти
   FreeAndNil(MOS);
+  FreeAndNil(path);
 
 end;
 
@@ -631,9 +656,14 @@ begin
     Exit;
 
   queryString := 'SELECT MUID FROM uds.graph_sections WHERE OKEY = ' + conn.quoteValue( IntToStr( oIndex ) );
-  conn.QueryOpen( queryString, dbRes, true );;
-  nodeMUID := FGraph.GetEdge_ByUID( dbRes.asInt64( 0 ) ).NodeTo.UID;
-  Result := true;
+  conn.QueryOpen( queryString, dbRes, true );
+  if (dbRes.Fetch()) then
+  begin
+    nodeMUID := FGraph.GetEdge_ByUID( dbRes.asInt64( 0 ) ).NodeTo.UID;
+    Result := true;
+  end
+  else
+    Result := false;
 end;
 
 {**********************************************************************************************
@@ -655,8 +685,13 @@ begin
 
   queryString := 'SELECT MUID FROM uds.graph_sections WHERE OKEY = ' + conn.quoteValue( IntToStr( oIndex ) );
   conn.QueryOpen( queryString, dbRes, true );;
-  nodeMUID := FGraph.GetEdge_ByUID( dbRes.asInt64( 0 ) ).NodeFrom.UID;
-  Result := true;
+  if (dbRes.Fetch()) then
+  begin
+    nodeMUID := FGraph.GetEdge_ByUID( dbRes.asInt64( 0 ) ).NodeFrom.UID;
+    Result := true;
+  end
+  else
+    Result := false;
 end;
 
 {**********************************************************************************************
@@ -691,7 +726,6 @@ begin
   newVertex.x := FMap.XFrom;
   newVertex.y := FMap.YFrom;
   MOS.AddVertex(0,newVertex);
-
 
   newVertex.x := resultXFrom;
   newVertex.y := resultYFrom;

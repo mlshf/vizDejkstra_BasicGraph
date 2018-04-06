@@ -20,7 +20,6 @@ object FMap: TFMap
     Height = 473
     AlignTools = atLeft
     StatusLoading = True
-    EditObjectEventsLock = False
     OnMapMouseDown = FMapplMapMouseDown
   end
 end

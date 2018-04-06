@@ -144,13 +144,13 @@ begin
   oAmount := Mappl.GetLayerObjectsInMapPointToMosList(13,StartX,StartY,MOSList,10,ofmpDefault,false,true,'',true,FEdgesList,true);
   For i := 0 to oAmount-1 do
   begin
-    If StrToInt(MOSList.Items[i].ValueList[1]) = NodeIn Then
+    If StrToInt(MOSList.Items[i].Value[1]) = NodeIn Then
     begin
       Inc(ResultAmount);
       SetLength(ResultArray, ResultAmount);
       ResultArray[ResultAmount - 1] := TEdge.Create();
       ResultArray[ResultAmount - 1].NodeIn := NodeIn;
-      ResultArray[ResultAmount - 1].NodeOut := StrToInt(MOSList.Items[i].ValueList[2]);
+      ResultArray[ResultAmount - 1].NodeOut := StrToInt(MOSList.Items[i].Value[2]);
       ResultArray[ResultAmount - 1].MOS := MOSList.Items[i];
     end;
   end;
